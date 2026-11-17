@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>アプリ紹介 | QBナビィ！ | はらぺこskip</title>
+<meta name="description" content="QBナビィ！でできることの紹介。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<canvas id="sparkles" aria-hidden="true"></canvas>
+<header class="site-header">
+  <a class="brand" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ff7fae" d="M12 1l2.9 7.1L22 11l-7.1 2.9L12 23l-2.9-9.1L2 11l7.1-2.9z"/><circle cx="19" cy="4" r="2" fill="#f3c969"/></svg><span>はらぺこskip <small>byぷこぬ</small></span></a>
+  <nav class="site-nav" aria-label="メインメニュー">
+    <a href="index.html">トップ</a><a href="features.html" aria-current="page">アプリ紹介</a><a href="download.html">ダウンロード</a><a href="support.html">サポート</a>
+    <button class="motion-btn" type="button" aria-pressed="true">演出 ON</button><button class="theme-btn" type="button" aria-label="ダークモードにする">☾</button>
+  </nav>
+</header>
+<div class="wrap">
+<main>
+<div class="page-head">
+  <span class="en">ABOUT THE APP</span>
+  <h1>アプリ紹介</h1>
+  <p>QBナビィ！でできることを、ひとつずつ紹介します。</p>
+</div>
+<nav class="chips" aria-label="機能の目次">
+  <a href="#f-effect">演出</a><a href="#f-info">ゲーム情報</a><a href="#f-player">プレーヤー</a><a href="#f-record">記録</a><a href="#f-save">設定の保存</a>
+</nav>
+<section class="feature" id="f-effect">
+  <div class="shot">
+    <img class="peek" src="assets/img/chars/madoka_5.webp" alt="">
+    <div class="shot-bar"><i></i><i></i><i></i></div>
+    <div class="shot-body has-img"><button class="zoom" type="button" aria-label="画面を彩る演出の画像を拡大する"><img src="assets/img/shots/001_critical.webp" alt="画面を彩る演出" loading="lazy"><span class="zoom-hint">クリックで拡大</span></button></div>
+  </div>
+  <div>
+    <span class="f-tag">EFFECT</span>
+    <h2>画面を彩る演出<small>(アフターエフェクト版機能)</small></h2>
+    <p>戦闘中のダメージやクリティカル、Wave間のリザルトに合わせて、吹き出しや画面全体の演出を重ねて表示します。</p>
+    <ul class="points"><li>曲名の吹き出しやクリティカルの吹き出しを表示</li><li>形・位置・透過度を設定ウィンドウで調整</li><li>「そのほかの場面」も個別にオン・オフ</li></ul>
+  </div>
+</section>
+<section class="feature" id="f-info">
+  <div class="shot">
+    <img class="peek" src="assets/img/chars/homura_4.webp" alt="">
+    <div class="shot-bar"><i></i><i></i><i></i></div>
+    <div class="shot-body"><span>画面イメージ準備中</span></div>
+  </div>
+  <div>
+    <span class="f-tag">GAME INFO</span>
+    <h2>ゲーム情報でプレイをサポート</h2>
+    <p>ゲームから得られる情報をもとに、プレイ中に役立つ表示でサポートします。</p>
+    <ul class="points"><li>ダメージやクリティカルの情報を読み取って表示</li><li>敵のおおよその位置を推定して知らせる</li><li>Wave間のリザルトを自動で表示</li></ul>
+  </div>
+</section>
+<section class="feature" id="f-player">
+  <div class="shot">
+    <img class="peek" src="assets/img/chars/sayaka_1.webp" alt="">
+    <div class="shot-bar"><i></i><i></i><i></i></div>
+    <div class="shot-body has-img"><button class="zoom" type="button" aria-label="動画・音楽・TVプレーヤーの画像を拡大する"><img src="assets/img/shots/003_player.webp" alt="動画・音楽・TVプレーヤー" loading="lazy"><span class="zoom-hint">クリックで拡大</span></button></div>
+  </div>
+  <div>
+    <span class="f-tag">PLAYER</span>
+    <h2>動画・音楽・TVプレーヤー</h2>
+    <p>ゲームをしながら、YouTube・音楽・TVをアプリの中で楽しめます。</p>
+    <ul class="points"><li>ニュース・ライブ・ゲーム・アニメ・料理・音楽・動物のジャンル</li><li>好きなチャンネルのURLを登録して自動再生</li><li>窓を分離・合体、背景を透過、位置を固定</li></ul>
+  </div>
+</section>
+<section class="feature" id="f-record">
+  <div class="shot">
+    <img class="peek" src="assets/img/chars/mami_6.webp" alt="">
+    <div class="shot-bar"><i></i><i></i><i></i></div>
+    <div class="shot-body has-img"><button class="zoom" type="button" aria-label="記録とカレンダーの画像を拡大する"><img src="assets/img/shots/004_buki.webp" alt="記録とカレンダー" loading="lazy"><span class="zoom-hint">クリックで拡大</span></button></div>
+  </div>
+  <div>
+    <span class="f-tag">RECORD</span>
+    <h2>記録とカレンダー</h2>
+    <p>その日のキル数とスコアを記録します。獲得した武器は自動的に記録されるので、手で入力する必要はありません。</p>
+    <ul class="points"><li>獲得した武器を自動で記録し、累計で一覧</li><li>カレンダーに日ごとのキル数とスコアを表示</li><li>今日と明日の天気をカレンダーの上に表示</li></ul>
+  </div>
+</section>
+<section class="feature" id="f-save">
+  <div class="shot">
+    <img class="peek" src="assets/img/chars/madoka_2.webp" alt="">
+    <div class="shot-bar"><i></i><i></i><i></i></div>
+    <div class="shot-body has-img"><button class="zoom" type="button" aria-label="設定のまとめ保存の画像を拡大する"><img src="assets/img/shots/005_settei.webp" alt="設定のまとめ保存" loading="lazy"><span class="zoom-hint">クリックで拡大</span></button></div>
+  </div>
+  <div>
+    <span class="f-tag">SAVE</span>
+    <h2>設定のまとめ保存</h2>
+    <p>凝った設定は、まとめてファイルに保存できます。</p>
+    <ul class="points"><li>設定1・2・3をまとめて保存・読み込み</li><li>別のパソコンへの引っ越しにも便利</li></ul>
+  </div>
+</section>
+<section class="spec">
+  <div class="sec-title"><span class="en">SPEC</span><h2>動作環境</h2></div>
+  <dl class="spec-card">
+    <div class="spec-row"><dt>対応OS</dt><dd>Windows 10 / 11</dd></div>
+    <div class="spec-row"><dt>料金</dt><dd>無料</dd></div>
+    <div class="spec-row"><dt>最新バージョン</dt><dd>ｖ4.17</dd></div>
+  </dl>
+</section>
+<section class="cta"><h2>気になったら、さっそく試そう</h2><p>ダウンロードは無料です。</p><a class="btn" href="download.html">ダウンロードページへ</a><div class="cta-row"><img src="assets/img/chibi/madoka.webp" alt=""><img src="assets/img/chibi/homura.webp" alt=""><img src="assets/img/chibi/aosaya.webp" alt=""><img src="assets/img/chibi/mami.webp" alt=""><img src="assets/img/chibi/oriko.webp" alt=""><img src="assets/img/chibi/kirika.webp" alt=""><img src="assets/img/chibi/yuma.webp" alt=""><img src="assets/img/chibi/nagisa.webp" alt=""></div></section>
+</main>
+</div>
+<footer class="site-footer">
+  <div class="f-nav"><a href="index.html">トップ</a><a href="features.html">アプリ紹介</a><a href="download.html">ダウンロード</a><a href="support.html">サポート</a></div>
+  <small>QBナビィ！は個人が制作した非公式のファンメイドアプリです。作品・キャラクターに関する権利は、それぞれの権利者に帰属します。</small>
+  <small>© はらぺこskip</small>
+</footer>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
