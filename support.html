@@ -24,21 +24,32 @@
   <h1>サポート掲示板</h1>
   <p>使い方の質問、不具合の報告、ご要望などを書き込めます。</p>
 </div>
-<p class="notice">【仮】この掲示板は見た目の確認用です。投稿はまだ保存されず、ページを閉じると消えます。下の投稿はサンプルです。</p>
+<p class="notice" id="bbs-notice">書き込みは公開されます。個人情報（本名・住所・メールアドレスなど）やURLは書かないでください。管理人からの返信は「管理人」マークつきで表示されます。</p>
 <div class="bbs">
   <form class="bbs-form" id="bbs-form" autocomplete="off">
     <h2>書き込む</h2>
     <label for="bbs-name">お名前<input id="bbs-name" name="name" type="text" maxlength="30" placeholder="名無しさん"></label>
     <label for="bbs-cat">種類<select id="bbs-cat" name="cat"><option>質問</option><option>不具合</option><option>要望</option><option>その他</option></select></label>
-    <label for="bbs-body">本文<textarea id="bbs-body" name="body" maxlength="1000" placeholder="バージョンと、困っていることを書いてください。"></textarea></label>
-    <button class="btn btn-primary" type="submit">投稿する</button>
-    <p class="bbs-msg" id="bbs-msg" role="status"></p>
+    <label for="bbs-body">本文<textarea id="bbs-body" name="body" maxlength="1000" rows="6" placeholder="バージョンと、困っていることを書いてください。"></textarea></label>
+    <div class="hp" aria-hidden="true"><label>ここは空のままにしてください<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    <div class="bbs-actions"><button class="btn btn-primary" type="submit">投稿する</button><span class="bbs-count" id="bbs-count">0 / 1000</span></div>
+    <p class="bbs-msg" id="bbs-msg" role="status" aria-live="polite"></p>
+    <ul class="bbs-rules">
+      <li>バージョン（例：ｖ4.17）と、困っている状況を書くと答えやすくなります。</li>
+      <li>荒らし対策のため、続けての書き込みはできません。</li>
+      <li>書いた内容は、あとから自分では消せません。</li>
+    </ul>
   </form>
   <section class="bbs-list" id="bbs-posts" aria-label="投稿一覧">
-    <h2>みんなの書き込み</h2>
-    <article class="post"><img class="av" src="assets/img/faces/face_01.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag">質問</span><span class="tag sample">サンプル</span><span>2026/11/17 10:00</span></div><p>オプションデータは、本体と同じフォルダに入れればよいですか？</p></div></article>
-    <article class="post"><img class="av" src="assets/img/faces/face_03.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag">不具合</span><span class="tag sample">サンプル</span><span>2026/11/16 21:30</span></div><p>起動直後に設定ウィンドウが開かないことがありました。バージョンは ｖ4.17 です。</p></div></article>
-    <article class="post"><img class="av" src="assets/img/faces/face_12.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag">要望</span><span class="tag sample">サンプル</span><span>2026/11/15 18:45</span></div><p>効果音を、もっと細かく選べるとうれしいです。</p></div></article>
+    <div class="bbs-list-head"><h2>みんなの書き込み</h2><button class="btn-mini" type="button" id="bbs-reload">最新にする</button></div>
+    <p class="bbs-status" id="bbs-status" role="status" hidden></p>
+    <div class="post-list" id="bbs-samples">
+      <article class="post"><img class="av" src="assets/img/faces/face_01.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag" data-cat="質問">質問</span><span class="tag sample">サンプル</span><span>2026/11/17 10:00</span></div><p>オプションデータは、本体と同じフォルダに入れればよいですか？</p></div></article>
+      <article class="post"><img class="av" src="assets/img/faces/face_03.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag" data-cat="不具合">不具合</span><span class="tag sample">サンプル</span><span>2026/11/16 21:30</span></div><p>起動直後に設定ウィンドウが開かないことがありました。バージョンは ｖ4.17 です。</p></div></article>
+      <article class="post"><img class="av" src="assets/img/faces/face_12.webp" alt=""><div><div class="post-top"><b>サンプルさん</b><span class="tag" data-cat="要望">要望</span><span class="tag sample">サンプル</span><span>2026/11/15 18:45</span></div><p>効果音を、もっと細かく選べるとうれしいです。</p></div></article>
+    </div>
+    <div class="post-list" id="bbs-feed"></div>
+    <div class="bbs-more"><button class="btn btn-ghost" type="button" id="bbs-more" hidden>もっと見る</button></div>
   </section>
 </div>
 <section class="cta"><h2>まずは使ってみよう</h2><p>ダウンロードは無料です。</p><a class="btn" href="download.html">ダウンロードページへ</a><div class="cta-row"><img src="assets/img/chibi/madoka.webp" alt=""><img src="assets/img/chibi/homura.webp" alt=""><img src="assets/img/chibi/aosaya.webp" alt=""><img src="assets/img/chibi/mami.webp" alt=""><img src="assets/img/chibi/oriko.webp" alt=""><img src="assets/img/chibi/kirika.webp" alt=""><img src="assets/img/chibi/yuma.webp" alt=""><img src="assets/img/chibi/nagisa.webp" alt=""></div></section>
@@ -49,6 +60,7 @@
   <small>QBナビィ！は個人が制作した非公式のファンメイドアプリです。作品・キャラクターに関する権利は、それぞれの権利者に帰属します。</small>
   <small>© はらぺこskip</small>
 </footer>
+<script src="assets/js/bbs-config.js"></script>
 <script src="assets/js/main.js"></script>
 </body>
 </html>

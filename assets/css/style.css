@@ -315,3 +315,73 @@ h1.logo-h { margin: 0; }
 .lb img { max-width: min(96vw, 1240px); max-height: 86vh; width: auto; height: auto; background: repeating-linear-gradient(45deg, transparent 0 14px, color-mix(in srgb, var(--pink) 10%, transparent) 14px 28px) var(--card); border-radius: 18px; border: 4px solid var(--pink); box-shadow: 0 12px 40px rgba(0, 0, 0, .45); }
 .lb-close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--pink); background: var(--card); color: var(--ink); font-size: 22px; cursor: pointer; line-height: 1; }
 @keyframes lb-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- サポート掲示板 ---------- */
+.notice {
+  max-width: 760px; margin: 6px auto 30px; padding: 10px 20px; text-align: center;
+  font-size: 14px; font-weight: 700; color: var(--ink-soft); line-height: 1.7;
+  background: color-mix(in srgb, var(--gold) 22%, var(--card)); border: 3px dashed color-mix(in srgb, var(--gold) 80%, var(--line)); border-radius: 22px;
+}
+.notice.admin { background: color-mix(in srgb, var(--pink) 18%, var(--card)); border-color: var(--pink); color: var(--ink); }
+.bbs { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 28px; }
+.bbs h2 { font-size: 20px; font-weight: 900; }
+.bbs-form {
+  position: sticky; top: 96px; display: grid; gap: 14px;
+  background: var(--card); border: 3px solid var(--pink); border-radius: 28px; padding: 22px 20px 18px; box-shadow: 0 10px 24px var(--shadow);
+}
+.bbs-form.is-admin { border-color: var(--gold); }
+.bbs-form label { display: grid; gap: 6px; font-weight: 900; font-size: 14px; color: var(--pink-deep); }
+.bbs-form input[type="text"], .bbs-form select, .bbs-form textarea {
+  width: 100%; font: 500 16px/1.6 var(--font-main); color: var(--ink);
+  background: var(--bg); border: 3px solid var(--line); border-radius: 16px; padding: 9px 14px;
+}
+.bbs-form textarea { resize: vertical; min-height: 140px; }
+.bbs-form input::placeholder, .bbs-form textarea::placeholder { color: color-mix(in srgb, var(--ink-soft) 70%, transparent); }
+.bbs-form input[type="text"]:focus, .bbs-form select:focus, .bbs-form textarea:focus { outline: none; border-color: var(--pink); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pink) 25%, transparent); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.bbs-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bbs-actions .btn { padding: 10px 26px; }
+.bbs-actions .btn:disabled { opacity: .6; cursor: wait; transform: none; }
+.bbs-count { font: 600 13px var(--font-deco); color: var(--ink-soft); }
+.bbs-msg:empty { display: none; }
+.bbs-msg { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+.bbs-msg.err { color: var(--pink-deep); }
+.bbs-rules { margin: 0; padding: 10px 0 0 1.2em; border-top: 2px dashed var(--line); font-size: 13px; color: var(--ink-soft); display: grid; gap: 4px; }
+
+.bbs-list { min-width: 0; }
+.bbs-list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.bbs-status { padding: 18px; text-align: center; font-weight: 700; color: var(--ink-soft); background: var(--card); border: 3px dashed var(--line); border-radius: 22px; margin-bottom: 14px; }
+.bbs-status[hidden] { display: none; }
+.post-list { display: grid; gap: 14px; }
+.post-list:empty { display: none; }
+.post { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: start; background: var(--card); border: 3px solid var(--line); border-radius: 24px; padding: 14px 18px; }
+.post.by-admin { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 9%, var(--card)); }
+.post.new { animation: post-in .55s cubic-bezier(.3, 1.4, .5, 1) both; }
+.post .av { width: 64px; height: 64px; object-fit: contain; border-radius: 50%; background: var(--bg-2); border: 3px solid var(--line); padding: 2px; }
+.post.by-admin .av { border-color: var(--pink); }
+.post-top { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 13px; color: var(--ink-soft); }
+.post-top b { color: var(--ink); font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.post p { margin-top: 4px; font-size: 15px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tag { font-size: 12px; font-weight: 900; line-height: 1.7; padding: 0 10px; border-radius: 999px; color: var(--ink); background: var(--bg-2); border: 2px solid var(--line); }
+.tag[data-cat="質問"] { background: color-mix(in srgb, var(--fx-b) 22%, var(--card)); border-color: color-mix(in srgb, var(--fx-b) 55%, var(--card)); }
+.tag[data-cat="不具合"] { background: color-mix(in srgb, var(--pink) 22%, var(--card)); border-color: var(--pink); }
+.tag[data-cat="要望"] { background: color-mix(in srgb, var(--gold) 32%, var(--card)); border-color: var(--gold); }
+.tag[data-cat="その他"] { background: color-mix(in srgb, var(--lilac) 28%, var(--card)); border-color: var(--lilac); }
+.tag.sample { border-style: dashed; background: transparent; color: var(--ink-soft); }
+.tag.admin { background: var(--pink); border-color: var(--pink-deep); color: var(--on-pink); }
+.post .no { font-family: var(--font-deco); font-weight: 600; letter-spacing: .04em; }
+.btn-mini { font: 700 13px var(--font-main); padding: 2px 14px; border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.btn-mini:hover { background: var(--bg-2); border-color: var(--pink); }
+.btn-mini:disabled { opacity: .6; cursor: wait; }
+.btn-mini.del { margin-left: auto; color: var(--pink-deep); }
+.bbs-more { display: grid; justify-items: center; margin-top: 18px; }
+.bbs-more .btn[hidden] { display: none; }
+@keyframes post-in { 0% { opacity: 0; transform: translateY(-14px) scale(.96); } 100% { opacity: 1; transform: none; } }
+@media (max-width: 820px) {
+  .bbs { grid-template-columns: minmax(0, 1fr); }
+  .bbs-form { position: static; }
+}
+@media (max-width: 480px) {
+  .post { grid-template-columns: 48px minmax(0, 1fr); gap: 10px; padding: 12px 14px; }
+  .post .av { width: 48px; height: 48px; }
+}

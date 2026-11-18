@@ -85,33 +85,143 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLb(); });
 
-  /* ---- 掲示板（見た目の確認用。投稿は保存されません） ---- */
-  var form = document.getElementById('bbs-form');
-  if (form) {
-    var list = document.getElementById('bbs-posts'), msg = document.getElementById('bbs-msg');
-    var avatars = ['face_01', 'face_02', 'face_03', 'face_04', 'face_05', 'face_07', 'face_12'];
+  /* ---- 掲示板 ----
+     assets/js/bbs-config.js の window.HS_BBS_API に、掲示板サーバー(Cloudflare Worker)のURLを書くと、
+     みんなの書き込みが保存・表示されます。空のままのときは「見た目の確認用」で、投稿は保存されません。
+     管理人: ページのURLの末尾に #admin を付けて開くと、管理用パスワードで返信(管理人マーク)・削除ができます。 */
+  (function bbs() {
+    var form = document.getElementById('bbs-form'); if (!form) return;
+    var msg = document.getElementById('bbs-msg'), notice = document.getElementById('bbs-notice'), status = document.getElementById('bbs-status');
+    var samples = document.getElementById('bbs-samples'), feed = document.getElementById('bbs-feed');
+    var moreBtn = document.getElementById('bbs-more'), reloadBtn = document.getElementById('bbs-reload'), count = document.getElementById('bbs-count');
+    var submit = form.querySelector('button[type="submit"]');
+    var api = String(window.HS_BBS_API || '').replace(/\/+$/, '');
+    var faces = ['face_01', 'face_02', 'face_03', 'face_04', 'face_05', 'face_07', 'face_12'];
+    var adminMode = !!api && location.hash === '#admin', adminKey = '';
+    var oldest = 0, loading = false;
+    try { adminKey = sessionStorage.getItem('hs-bbs-admin') || ''; } catch (e) {}
+    try { var nm = localStorage.getItem('hs-bbs-name'); if (nm && !adminMode) form.elements.name.value = nm; } catch (e) {}
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function fmt(t) { var d = new Date(t); return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    function say(text, isErr) { msg.textContent = text; msg.className = 'bbs-msg' + (isErr ? ' err' : ''); }
+    function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+    /* 書き込み1件ぶんの表示を作る(文字は textContent で入れるので、HTMLとして実行されません) */
+    function makePost(p, isNew) {
+      var art = el('article', 'post' + (p.admin ? ' by-admin' : '') + (isNew ? ' new' : ''));
+      art.setAttribute('data-id', p.id);
+      var img = el('img', 'av'); img.alt = ''; img.width = 64; img.height = 64; img.decoding = 'async';
+      img.src = p.admin ? 'assets/img/chibi/harapan.webp' : 'assets/img/faces/' + faces[Math.abs(p.id) % faces.length] + '.webp';
+      var box = el('div'), top = el('div', 'post-top');
+      top.appendChild(el('b', '', p.name));
+      var tag = el('span', 'tag', p.cat); tag.setAttribute('data-cat', p.cat); top.appendChild(tag);
+      if (p.admin) top.appendChild(el('span', 'tag admin', '管理人'));
+      top.appendChild(el('span', 'no', 'No.' + p.id));
+      top.appendChild(el('span', '', fmt(p.t)));
+      if (adminMode) { var del = el('button', 'btn-mini del', '削除'); del.type = 'button'; top.appendChild(del); }
+      box.appendChild(top); box.appendChild(el('p', '', p.body));
+      art.appendChild(img); art.appendChild(box);
+      return art;
+    }
+
+    count.textContent = '0 / ' + form.elements.body.maxLength;
+    form.elements.body.addEventListener('input', function () { count.textContent = form.elements.body.value.length + ' / ' + form.elements.body.maxLength; });
+
+    /* ---- 見た目の確認用(掲示板サーバー未設定) ---- */
+    if (!api) {
+      notice.textContent = '【仮】この掲示板は見た目の確認用です。投稿はまだ保存されず、ページを閉じると消えます。下の投稿はサンプルです。';
+      reloadBtn.hidden = true;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var body = form.elements.body.value.trim();
+        if (!body) { say('本文を入力してください。', true); form.elements.body.focus(); return; }
+        var p = { id: Math.floor(Math.random() * 900) + 100, name: form.elements.name.value.trim() || '名無しさん', cat: form.elements.cat.value, body: body, t: Date.now(), admin: false };
+        feed.insertBefore(makePost(p, true), feed.firstChild);
+        form.elements.body.value = ''; count.textContent = '0 / ' + form.elements.body.maxLength;
+        say('表示を確認しました（仮表示のため、ページを閉じると消えます）。');
+      });
+      return;
+    }
+
+    /* ---- 本番(掲示板サーバーにつながる) ---- */
+    samples.parentNode.removeChild(samples);
+    function request(method, path, payload, useKey) {
+      var headers = {}, opt = { method: method, headers: headers };
+      if (payload) { headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(payload); }
+      if (useKey && adminKey) headers['X-Admin-Key'] = adminKey;
+      return fetch(api + path, opt).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) { var err = new Error(j.error || '通信に失敗しました。'); err.status = r.status; throw err; }
+          return j;
+        });
+      });
+    }
+    function askKey() {
+      if (adminKey) return true;
+      adminKey = (window.prompt('管理用パスワードを入力してください') || '').trim();
+      try { if (adminKey) sessionStorage.setItem('hs-bbs-admin', adminKey); } catch (e) {}
+      return !!adminKey;
+    }
+    function forgetKey() { adminKey = ''; try { sessionStorage.removeItem('hs-bbs-admin'); } catch (e) {} }
+
+    if (adminMode) {
+      notice.textContent = '管理モードです。書き込むと「管理人」として表示され、各書き込みの「削除」ボタンで消せます。';
+      notice.classList.add('admin');
+      form.classList.add('is-admin');
+      askKey();
+    }
+
+    function setStatus(text) { status.textContent = text || ''; status.hidden = !text; }
+    function load(reset) {
+      if (loading) return; loading = true;
+      moreBtn.disabled = true; reloadBtn.disabled = true;
+      if (reset) { feed.textContent = ''; oldest = 0; moreBtn.hidden = true; setStatus('読み込み中…'); }
+      return request('GET', '/posts?limit=20' + (!reset && oldest ? '&before=' + oldest : '')).then(function (j) {
+        j.posts.forEach(function (p) { feed.appendChild(makePost(p, false)); });
+        if (j.posts.length) oldest = j.posts[j.posts.length - 1].id;
+        moreBtn.hidden = !j.more;
+        setStatus(feed.children.length ? '' : 'まだ書き込みはありません。最初の書き込みをどうぞ。');
+      }).catch(function () {
+        setStatus('書き込みを読み込めませんでした。しばらくしてから「最新にする」を押してください。');
+      }).then(function () { loading = false; moreBtn.disabled = false; reloadBtn.disabled = false; });
+    }
+    moreBtn.addEventListener('click', function () { load(false); });
+    reloadBtn.addEventListener('click', function () { load(true); });
+    load(true);
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var name = form.elements.name.value.trim() || '名無しさん';
       var body = form.elements.body.value.trim();
-      if (!body) { msg.textContent = '本文を入力してください。'; form.elements.body.focus(); return; }
-      var cat = form.elements.cat.value;
-      var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
-      var art = document.createElement('article'); art.className = 'post new';
-      var img = document.createElement('img'); img.className = 'av'; img.alt = '';
-      img.src = (list.getAttribute('data-av') || 'assets/img/faces/') + avatars[Math.floor(Math.random() * avatars.length)] + '.webp';
-      var box = document.createElement('div');
-      var top = document.createElement('div'); top.className = 'post-top';
-      var b = document.createElement('b'); b.textContent = name;
-      var tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = cat;
-      var when = document.createElement('span'); when.textContent = d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-      top.appendChild(b); top.appendChild(tag); top.appendChild(when);
-      var p = document.createElement('p'); p.textContent = body;
-      box.appendChild(top); box.appendChild(p); art.appendChild(img); art.appendChild(box);
-      var first = list.querySelector('.post'); list.insertBefore(art, first);
-      form.elements.body.value = ''; msg.textContent = '表示を確認しました（仮表示のため、ページを閉じると消えます）。';
+      if (!body) { say('本文を入力してください。', true); form.elements.body.focus(); return; }
+      if (adminMode && !askKey()) { say('管理用パスワードが必要です。', true); return; }
+      var name = form.elements.name.value.trim();
+      submit.disabled = true; say('送信中…');
+      request('POST', '/posts', { name: name, cat: form.elements.cat.value, body: body, website: form.elements.website.value }, adminMode).then(function (j) {
+        if (j.post) { feed.insertBefore(makePost(j.post, true), feed.firstChild); setStatus(''); }
+        form.elements.body.value = ''; count.textContent = '0 / ' + form.elements.body.maxLength;
+        try { if (!adminMode) localStorage.setItem('hs-bbs-name', name); } catch (e2) {}
+        say('書き込みました。ありがとうございます！');
+      }).catch(function (err) {
+        if (err.status === 401) forgetKey();
+        say(err.status ? err.message : '送信できませんでした。通信状況を確認して、もう一度お試しください。', true);
+      }).then(function () { submit.disabled = false; });
     });
-  }
+
+    feed.addEventListener('click', function (e) {
+      var b = e.target.closest('.del'); if (!b || !adminMode) return;
+      var art = b.closest('.post'), id = art.getAttribute('data-id');
+      if (!askKey() || !window.confirm('No.' + id + ' を削除します。元に戻せません。よろしいですか？')) return;
+      b.disabled = true;
+      request('DELETE', '/posts/' + id, null, true).then(function () {
+        art.parentNode.removeChild(art);
+        if (!feed.children.length) setStatus('まだ書き込みはありません。最初の書き込みをどうぞ。');
+      }).catch(function (err) {
+        if (err.status === 401) forgetKey();
+        b.disabled = false; window.alert(err.message || '削除できませんでした。');
+      });
+    });
+  })();
 
   /* ---- トップのキャラ演出（開いた時に1回 + ずっと続く） ----
      1回: 波紋の輪 / 流れ星 / 星のはじけ / 魔法陣が回りながら現れる
