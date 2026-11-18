@@ -78,8 +78,7 @@ p { margin: 0; }
   max-width: 1080px; margin: 10px auto 0;
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between;
   padding: 8px 10px 8px 18px;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
   border: 2px solid var(--line); border-radius: 999px;
   box-shadow: 0 6px 20px var(--shadow);
 }
@@ -385,3 +384,52 @@ h1.logo-h { margin: 0; }
   .post { grid-template-columns: 48px minmax(0, 1fr); gap: 10px; padding: 12px 14px; }
   .post .av { width: 48px; height: 48px; }
 }
+
+/* ---------- 演出(キラキラ・後光・魔法陣): CSSアニメーションで動かして、CPUの負担を軽くしています ---------- */
+:root { --fx-ring-a: .54; --fx-halo-a: .3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fx-ring-a: .75; --fx-halo-a: .26; } }
+:root[data-theme="dark"] { --fx-ring-a: .75; --fx-halo-a: .26; }
+
+#sparkles { display: none; }
+.sparkles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.sparkles .sp { position: absolute; top: 0; left: var(--x); width: var(--w); height: var(--h); animation: sp-fall var(--fall) linear var(--fd) infinite; will-change: transform; }
+.sparkles .sp b { display: block; width: 100%; height: 100%; background: var(--sparkle); animation: sp-sway var(--sw) ease-in-out var(--sd) infinite alternate, sp-tw var(--tw) ease-in-out var(--td) infinite; }
+.sparkles .star b { clip-path: polygon(100% 50%, 61.31% 61.31%, 50% 100%, 38.69% 61.31%, 0 50%, 38.69% 38.69%, 50% 0, 61.31% 38.69%); }
+.sparkles .heart b {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-0.82 -0.69 1.64 1.59'%3E%3Cpath d='M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-0.82 -0.69 1.64 1.59'%3E%3Cpath d='M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+@keyframes sp-fall { from { transform: translate3d(0, -24px, 0); } to { transform: translate3d(0, calc(100vh + 24px), 0); } }
+@keyframes sp-sway { from { transform: translate3d(-18px, 0, 0); } to { transform: translate3d(18px, 0, 0); } }
+@keyframes sp-tw { 0%, 100% { opacity: calc(var(--a) * .2); } 50% { opacity: var(--a); } }
+
+.fx-rings { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; pointer-events: none; z-index: 0; }
+.fx-center { position: absolute; left: 50%; top: 55%; width: 0; height: 0; }
+.fx-halo, .fx-circle, .fx-rot, .fx-flat { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.fx-ray {
+  position: absolute; left: 0; top: calc(var(--R, 160px) * -.13); width: calc(var(--R, 160px) * 1.45); height: calc(var(--R, 160px) * .26);
+  transform-origin: 0 50%; clip-path: polygon(0 50%, 100% 0, 100% 100%);
+  background: radial-gradient(circle calc(var(--R, 160px) * 1.45) at 0 50%, var(--fx-a) calc(var(--R, 160px) * .5), transparent);
+  opacity: calc(var(--fx-halo-a) * .85);
+}
+.fx-circle { transform: scale(1, .9); opacity: var(--fx-ring-a); }
+.fx-svg { position: absolute; left: calc(var(--R, 160px) * -1); top: calc(var(--R, 160px) * -1); width: calc(var(--R, 160px) * 2); height: calc(var(--R, 160px) * 2); overflow: visible; fill: none; stroke: var(--fx-a); stroke-width: .9; }
+.fx-svg .sky { stroke: var(--fx-b); }
+.fx-svg .dot { fill: var(--fx-b); stroke: none; }
+.fx-svg .dash { stroke-width: 1.2; stroke-dasharray: 1 4.5; }
+.fx-rings.live .fx-halo { animation: fx-fade 1.1s cubic-bezier(.215, .61, .355, 1) both, fx-spin 105s linear infinite; }
+.fx-rings.live .fx-ray { animation: fx-pulse 5.24s ease-in-out infinite; animation-delay: calc(var(--i) * -.833s); }
+.fx-rings.live .fx-circle { animation: fx-ring-in 1.3s cubic-bezier(.215, .61, .355, 1) both; }
+.fx-rings.live .fx-rot { animation: fx-spin 52.4s linear infinite; }
+.fx-rings.live .fx-rot.r2 { animation-name: fx-spin-rev; animation-duration: 34.9s; }
+.fx-rings.live .fx-rot.r3 { animation-duration: 25.1s; }
+.fx-rings.live .fx-rot .fx-svg { animation: fx-spin-in 1.8s cubic-bezier(.215, .61, .355, 1) both; }
+.fx-rings.live .fx-rot.r2 .fx-svg { animation-name: fx-spin-in-rev; }
+.fx-rings.paused, .fx-rings.paused * { animation-play-state: paused !important; }
+@keyframes fx-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-spin { to { transform: rotate(360deg); } }
+@keyframes fx-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes fx-spin-in { from { transform: rotate(343.8deg); } to { transform: none; } }
+@keyframes fx-spin-in-rev { from { transform: rotate(-343.8deg); } to { transform: none; } }
+@keyframes fx-ring-in { from { opacity: 0; transform: scale(.35, .315); } to { opacity: var(--fx-ring-a); transform: scale(1, .9); } }
+@keyframes fx-pulse { 0%, 100% { opacity: calc(var(--fx-halo-a) * .4); } 50% { opacity: var(--fx-halo-a); } }
