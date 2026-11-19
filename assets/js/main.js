@@ -6,6 +6,14 @@
   try { var sm = localStorage.getItem('hs-motion'); if (sm) root.setAttribute('data-motion', sm); } catch (e) {}
   var osReduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var reduce = root.getAttribute('data-motion') ? root.getAttribute('data-motion') === 'off' : osReduce;
+  /* 診断用: アドレスの末尾に ?fx=none / sparkles / rings / canvas / chars を付けると、その演出だけを動かします */
+  var FX = (location.search.match(/[?&]fx=(\w+)/) || [])[1] || '';
+  function on(n) { return !FX || FX === 'all' || FX === n; }
+  if (FX && !reduce) {
+    var offCss = '';
+    if (!on('chars')) offCss += '.hero-logo,.ch,.cta-row img,.dl-card .chibi{animation:none!important}';
+    if (offCss) { var st = document.createElement('style'); st.textContent = offCss; document.head.appendChild(st); }
+  }
   document.querySelectorAll('.motion-btn').forEach(function (b) { b.textContent = reduce ? '演出 OFF' : '演出 ON'; b.setAttribute('aria-pressed', reduce ? 'false' : 'true'); });
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.motion-btn')) return;
@@ -265,6 +273,8 @@
       return box;
     }
     var rings = buildRings(cv);
+    if (!on('rings')) rings.style.display = 'none';
+    var cvOn = on('canvas');
 
     function readColors() {
       var cs = getComputedStyle(document.documentElement);
@@ -330,8 +340,9 @@
       if (active()) raf = requestAnimationFrame(loop);
       else { ctx.clearRect(0, 0, W, H); sleep(); }
     }
-    function kick() { if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
+    function kick() { if (!cvOn) return; if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
     function sleep() {
+      if (!cvOn) return;
       clearTimeout(wake);
       wake = setTimeout(function () { meteor(0); nextMeteor += rnd(6, 10); kick(); }, Math.max(0, nextMeteor * 1000 - (performance.now() - T0)));
     }
@@ -339,7 +350,7 @@
     window.addEventListener('stage-burst', function () { burst(18, 260); ripple(0); kick(); });
     document.addEventListener('visibilitychange', kick);
     if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; rings.classList.toggle('paused', !running); if (running) { if (active()) kick(); else sleep(); } }).observe(cv);
-    if (reduce) return;
+    if (reduce || !cvOn) return;
     intro(); kick();
   })();
 
@@ -348,7 +359,7 @@
      見た目は同じで、CPUの負担がほとんどかかりません。色は --sparkle(ライト/ダークで自動で切り替わります)。 */
   (function sparkles() {
     var old = document.getElementById('sparkles'); if (old) old.hidden = true;
-    if (reduce) return;
+    if (reduce || !on('sparkles')) return;
     var box = document.createElement('div'); box.className = 'sparkles'; box.setAttribute('aria-hidden', 'true');
     var n = window.innerWidth < 600 ? 16 : 28, vh = Math.max(window.innerHeight, 400);
     function rnd(a, b) { return a + Math.random() * (b - a); }
