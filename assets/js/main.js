@@ -224,14 +224,14 @@
   })();
 
   /* ---- トップのキャラ演出（開いた時に1回 + ずっと続く） ----
-     1回: 波紋の輪 / 流れ星 / 星のはじけ / 魔法陣が回りながら現れる
-     ずっと: 後光 / 魔法陣のゆっくりした回転 / 光の粒の上昇 / きらめき / ときどき流れ星
+     1回: 波紋の輪 / 流れ星 / 星のはじけ / 魔法陣が回りながら現れる(キャラをタップした時にも、はじけと波紋)
+     ずっと: 後光と魔法陣のゆっくりした回転 / ときどき流れ星
      ※ 回り続ける大きな図形(後光・魔法陣)は、ブラウザの描画担当(GPU)に任せるCSSアニメーションにしています。
-        JavaScriptで描くのは、小さな光の粒・星・流れ星・波紋だけです(見た目はそのままで、CPUの負担を減らすため)。 */
+        JavaScriptで描くのは、流れ星・波紋・はじけだけで、動いていない間は描画も待機もしません(CPUの負担を減らすため)。 */
   (function stageFx() {
     var cv = document.getElementById('stage-fx'); if (!cv) return;
     var ctx = cv.getContext('2d'), W = 0, H = 0, cx = 0, cy = 0, R = 0;
-    var T0 = performance.now(), last = T0, lastDraw = 0, parts = [], rise = [], twinkle = [], meteors = [], ripples = [];
+    var T0 = performance.now(), last = T0, lastDraw = 0, parts = [], meteors = [], ripples = [];
     var gold = '#e8a21f', sky = '#46aee6', pink = '#ff7fae', dark = false, tick = 0;
     function rnd(a, b) { return a + Math.random() * (b - a); }
     function rgba(h, a) { var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h) || [0, 'e8', 'a2', '1f']; return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')'; }
@@ -292,36 +292,16 @@
       parts = []; ripples = []; meteors = [];
       ripple(.1); ripple(.4); ripple(.7); burst(40, 380); meteor(.5); meteor(.85); meteor(1.2);
     }
-    function initContinuous() {
-      rise = []; twinkle = [];
-      for (var i = 0; i < 24; i++) rise.push({ x: rnd(.12, .88), y: rnd(0, 1), v: rnd(.04, .09), s: rnd(0, 6), r: rnd(2, 5), k: i % 4 });
-      for (var j = 0; j < 14; j++) twinkle.push({ x: rnd(.04, .96), y: rnd(.06, .9), p: rnd(0, 6), sp: rnd(1.2, 2.6), r: rnd(5, 11) });
-    }
     function draw(now) {
       var t = (now - T0) / 1000, dt = Math.min(.05, (now - last) / 1000); last = now;
       if (++tick % 60 === 1) readColors();
       ctx.clearRect(0, 0, W, H);
-      var fade = ease(t / 1.1);
       /* 波紋の輪 */
       ripples = ripples.filter(function (r) { r.t += dt; return r.t < 1.5; });
       ripples.forEach(function (r) {
         if (r.t < 0) return; var q = r.t / 1.5;
         ctx.globalAlpha = (1 - q) * .9; ctx.lineWidth = 5 * (1 - q) + 1; ctx.strokeStyle = 'hsl(' + ((q * 300 + t * 60) % 360) + ',90%,' + (dark ? 72 : 62) + '%)';
         ctx.beginPath(); ctx.arc(cx, cy, q * Math.min(R * 1.9, H * .43), 0, 6.283); ctx.stroke();
-      });
-      /* 光の粒の上昇 */
-      var cols = [gold, pink, sky, '#ffffff'];
-      rise.forEach(function (p) {
-        p.y -= p.v * dt; if (p.y < -.05) { p.y = 1.05; p.x = rnd(.12, .88); }
-        var al = Math.max(0, Math.min(1, p.y * 3)) * Math.min(1, (1.05 - p.y) * 5);
-        ctx.globalAlpha = .75 * al * fade; ctx.fillStyle = cols[p.k];
-        ctx.beginPath(); ctx.arc(p.x * W + Math.sin(t + p.s) * 14, p.y * H, p.r, 0, 6.283); ctx.fill();
-      });
-      /* きらめき */
-      ctx.fillStyle = dark ? '#fff' : gold;
-      twinkle.forEach(function (w) {
-        var q = Math.max(0, Math.sin(t * w.sp + w.p)); ctx.globalAlpha = q * .95 * fade;
-        star(w.x * W, w.y * H, w.r * (.5 + q * .7), 4);
       });
       /* はじけた星 */
       parts = parts.filter(function (p) { p.life += dt; return p.life < p.max; });
@@ -340,20 +320,27 @@
       });
       ctx.globalAlpha = 1;
     }
-    var running = true, nextMeteor = 7;
+    /* 動いている演出がある間だけ描き(多くても毎秒30回)、何もない間は止まって待ちます */
+    var running = true, raf = 0, wake = 0, nextMeteor = 7;
+    function active() { return ripples.length || parts.length || meteors.length; }
     function loop(now) {
-      /* 画面の更新は多くても毎秒30回(ゆっくりした動きなので見た目は変わらず、負担は半分) */
-      if (running && !document.hidden && now - lastDraw >= 30) {
-        lastDraw = now; draw(now);
-        if ((now - T0) / 1000 > nextMeteor) { meteor(0); nextMeteor += rnd(6, 10); }
-      }
-      requestAnimationFrame(loop);
+      raf = 0;
+      if (document.hidden || !running) return;
+      if (now - lastDraw >= 30) { lastDraw = now; draw(now); }
+      if (active()) raf = requestAnimationFrame(loop);
+      else { ctx.clearRect(0, 0, W, H); sleep(); }
     }
-    readColors(); size(); initContinuous(); window.addEventListener('resize', size);
-    window.addEventListener('stage-burst', function () { burst(18, 260); ripple(0); });
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; rings.classList.toggle('paused', !running); }).observe(cv);
-    if (reduce) { T0 = performance.now() - 5000; last = performance.now(); draw(performance.now()); return; }
-    intro(); requestAnimationFrame(loop);
+    function kick() { if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
+    function sleep() {
+      clearTimeout(wake);
+      wake = setTimeout(function () { meteor(0); nextMeteor += rnd(6, 10); kick(); }, Math.max(0, nextMeteor * 1000 - (performance.now() - T0)));
+    }
+    readColors(); size(); window.addEventListener('resize', size);
+    window.addEventListener('stage-burst', function () { burst(18, 260); ripple(0); kick(); });
+    document.addEventListener('visibilitychange', kick);
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; rings.classList.toggle('paused', !running); if (running) { if (active()) kick(); else sleep(); } }).observe(cv);
+    if (reduce) return;
+    intro(); kick();
   })();
 
   /* ---- キラキラ(星とハート)がゆっくり降る ----
