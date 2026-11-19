@@ -374,6 +374,9 @@ h1.logo-h { margin: 0; }
 .btn-mini.del { margin-left: auto; color: var(--pink-deep); }
 .bbs-more { display: grid; justify-items: center; margin-top: 18px; }
 .bbs-more .btn[hidden] { display: none; }
+.bbs-admin { display: grid; justify-items: center; margin-top: 26px; }
+.bbs-admin .btn-mini { font-size: 12px; opacity: .75; }
+.bbs-admin .btn-mini:hover { opacity: 1; }
 @keyframes post-in { 0% { opacity: 0; transform: translateY(-14px) scale(.96); } 100% { opacity: 1; transform: none; } }
 @media (max-width: 820px) {
   .bbs { grid-template-columns: minmax(0, 1fr); }

@@ -94,7 +94,7 @@
     var msg = document.getElementById('bbs-msg'), notice = document.getElementById('bbs-notice'), status = document.getElementById('bbs-status');
     var samples = document.getElementById('bbs-samples'), feed = document.getElementById('bbs-feed');
     var moreBtn = document.getElementById('bbs-more'), reloadBtn = document.getElementById('bbs-reload'), count = document.getElementById('bbs-count');
-    var submit = form.querySelector('button[type="submit"]');
+    var submit = form.querySelector('button[type="submit"]'), adminBtn = document.getElementById('bbs-admin-btn'), noticeText = notice.textContent;
     var api = String(window.HS_BBS_API || '').replace(/\/+$/, '');
     var faces = ['face_01', 'face_02', 'face_03', 'face_04', 'face_05', 'face_07', 'face_12'];
     var adminMode = !!api && location.hash === '#admin', adminKey = '';
@@ -165,12 +165,16 @@
     }
     function forgetKey() { adminKey = ''; try { sessionStorage.removeItem('hs-bbs-admin'); } catch (e) {} }
 
-    if (adminMode) {
-      notice.textContent = '管理モードです。書き込むと「管理人」として表示され、各書き込みの「削除」ボタンで消せます。';
-      notice.classList.add('admin');
-      form.classList.add('is-admin');
-      askKey();
+    /* 管理モードの表示(お知らせ文・フォームの見た目・ボタンの文字)を切り替える */
+    function applyAdminUi() {
+      notice.textContent = adminMode ? '管理モードです。書き込むと「管理人」として表示され、各書き込みの「削除」ボタンで消せます。' : noticeText;
+      notice.classList.toggle('admin', adminMode);
+      form.classList.toggle('is-admin', adminMode);
+      if (adminBtn) adminBtn.textContent = adminMode ? '管理モードをやめる' : '管理人用';
     }
+    if (adminBtn) adminBtn.hidden = false;
+    if (adminMode) askKey();
+    applyAdminUi();
 
     function setStatus(text) { status.textContent = text || ''; status.hidden = !text; }
     function load(reset) {
@@ -189,6 +193,28 @@
     moreBtn.addEventListener('click', function () { load(false); });
     reloadBtn.addEventListener('click', function () { load(true); });
     load(true);
+
+    /* 「管理人用」ボタン: パスワードを入力 → 正しければ管理モード(削除ボタンが出る)。もう一度押すと元に戻る */
+    if (adminBtn) adminBtn.addEventListener('click', function () {
+      if (adminMode) {
+        adminMode = false; forgetKey();
+        try { if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+        try { form.elements.name.value = localStorage.getItem('hs-bbs-name') || ''; } catch (e) {}
+        applyAdminUi(); say(''); load(true); return;
+      }
+      var k = (window.prompt('管理用パスワードを入力してください') || '').trim();
+      if (!k) return;
+      adminBtn.disabled = true; adminKey = k;
+      /* 存在しない書き込み(No.0)の削除を頼んで、パスワードだけを確かめます(何も消えません) */
+      request('DELETE', '/posts/0', null, true).then(function () {
+        try { sessionStorage.setItem('hs-bbs-admin', k); } catch (e) {}
+        adminMode = true; form.elements.name.value = '';
+        applyAdminUi(); say(''); load(true);
+      }).catch(function (err) {
+        forgetKey();
+        window.alert(err.status === 401 ? 'パスワードが違います。' : (err.status ? err.message : '確認できませんでした。通信状況を確認して、もう一度お試しください。'));
+      }).then(function () { adminBtn.disabled = false; });
+    });
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
