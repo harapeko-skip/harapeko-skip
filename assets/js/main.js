@@ -6,14 +6,6 @@
   try { var sm = localStorage.getItem('hs-motion'); if (sm) root.setAttribute('data-motion', sm); } catch (e) {}
   var osReduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var reduce = root.getAttribute('data-motion') ? root.getAttribute('data-motion') === 'off' : osReduce;
-  /* 診断用: アドレスの末尾に ?fx=none / sparkles / rings / canvas / chars を付けると、その演出だけを動かします */
-  var FX = (location.search.match(/[?&]fx=(\w+)/) || [])[1] || '';
-  function on(n) { return !FX || FX === 'all' || FX === n; }
-  if (FX && !reduce) {
-    var offCss = '';
-    if (!on('chars')) offCss += '.hero-logo,.ch,.cta-row img,.dl-card .chibi{animation:none!important}';
-    if (offCss) { var st = document.createElement('style'); st.textContent = offCss; document.head.appendChild(st); }
-  }
   document.querySelectorAll('.motion-btn').forEach(function (b) { b.textContent = reduce ? '演出 OFF' : '演出 ON'; b.setAttribute('aria-pressed', reduce ? 'false' : 'true'); });
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.motion-btn')) return;
@@ -273,8 +265,6 @@
       return box;
     }
     var rings = buildRings(cv);
-    if (!on('rings')) rings.style.display = 'none';
-    var cvOn = on('canvas');
 
     function readColors() {
       var cs = getComputedStyle(document.documentElement);
@@ -282,7 +272,7 @@
       dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     }
     function size() {
-      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      var dpr = 1;
       W = cv.clientWidth; H = cv.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       cx = W / 2; cy = H * .55; R = Math.min(W, H) * .4;
       rings.style.setProperty('--R', R.toFixed(1) + 'px');
@@ -300,7 +290,7 @@
     function meteor(delay) { meteors.push({ t: -delay, x: rnd(W * .55, W * 1.0), y: rnd(-10, H * .25), len: rnd(110, 170) }); }
     function intro() {
       parts = []; ripples = []; meteors = [];
-      ripple(.1); ripple(.4); ripple(.7); burst(40, 380); meteor(.5); meteor(.85); meteor(1.2);
+      ripple(.1); ripple(.4); ripple(.7); burst(26, 380); meteor(.5); meteor(.85); meteor(1.2);
     }
     function draw(now) {
       var t = (now - T0) / 1000, dt = Math.min(.05, (now - last) / 1000); last = now;
@@ -340,38 +330,66 @@
       if (active()) raf = requestAnimationFrame(loop);
       else { ctx.clearRect(0, 0, W, H); sleep(); }
     }
-    function kick() { if (!cvOn) return; if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
+    function kick() { if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
     function sleep() {
-      if (!cvOn) return;
       clearTimeout(wake);
       wake = setTimeout(function () { meteor(0); nextMeteor += rnd(6, 10); kick(); }, Math.max(0, nextMeteor * 1000 - (performance.now() - T0)));
     }
     readColors(); size(); window.addEventListener('resize', size);
-    window.addEventListener('stage-burst', function () { burst(18, 260); ripple(0); kick(); });
+    window.addEventListener('stage-burst', function () { burst(12, 260); ripple(0); kick(); });
     document.addEventListener('visibilitychange', kick);
     if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; rings.classList.toggle('paused', !running); if (running) { if (active()) kick(); else sleep(); } }).observe(cv);
-    if (reduce || !cvOn) return;
+    if (reduce) return;
     intro(); kick();
   })();
 
   /* ---- キラキラ(星とハート)がゆっくり降る ----
-     JavaScriptで毎コマ描くのをやめ、CSSアニメーション(ブラウザの描画担当に任せる方式)にしています。
-     見た目は同じで、CPUの負担がほとんどかかりません。色は --sparkle(ライト/ダークで自動で切り替わります)。 */
+     星とハートを1つずつ動かすのをやめ、模様を描いた透明な「タイル」3枚を重ねて、1枚ずつ流しています。
+     動くものが80個以上から6個ほどに減るので、画面の描き直しがとても少なくなります。
+     色は --sparkle(ライト/ダークで自動で切り替わります)。 */
   (function sparkles() {
     var old = document.getElementById('sparkles'); if (old) old.hidden = true;
-    if (reduce || !on('sparkles')) return;
+    if (reduce) return;
     var box = document.createElement('div'); box.className = 'sparkles'; box.setAttribute('aria-hidden', 'true');
-    var n = window.innerWidth < 600 ? 16 : 28, vh = Math.max(window.innerHeight, 400);
+    var styleEl = document.createElement('style');
+    var TW = Math.min(Math.max(window.screen.width || 0, window.innerWidth), 2560), VH = Math.max(window.screen.height || 0, window.innerHeight, 600);
+    var narrow = window.innerWidth < 600;
+    var layers = [
+      { th: 800, speed: 38, r: [8, 12], a: [.5, .85] },
+      { th: 1000, speed: 26, r: [6, 9], a: [.4, .75] },
+      { th: 1200, speed: 16, r: [4, 7], a: [.3, .6] }
+    ];
     function rnd(a, b) { return a + Math.random() * (b - a); }
-    for (var i = 0; i < n; i++) {
-      var heart = Math.random() < .3, r = rnd(4, 12), v = rnd(.25, .75) * 60, w = rnd(.01, .03) * 60;
-      var fall = (vh + 48) / v, sway = Math.PI / w;
-      var o = document.createElement('i'); o.className = 'sp ' + (heart ? 'heart' : 'star');
-      o.style.cssText = '--x:' + rnd(0, 100).toFixed(1) + '%;--w:' + (heart ? 1.64 * r : 2 * r).toFixed(1) + 'px;--h:' + (heart ? 1.59 * r : 2 * r).toFixed(1) + 'px;--fall:' + fall.toFixed(1) + 's;--fd:-' + rnd(0, fall).toFixed(1) +
-        's;--sw:' + sway.toFixed(2) + 's;--sd:-' + rnd(0, sway).toFixed(2) + 's;--tw:' + (sway * 2 / 3).toFixed(2) + 's;--td:-' + rnd(0, 3).toFixed(2) + 's;--a:' + rnd(.35, .85).toFixed(2);
-      o.appendChild(document.createElement('b'));
-      box.appendChild(o);
+    function tile(L, col) {
+      var n = Math.max(3, Math.round(TW * L.th / (narrow ? 380000 : 190000))), d = '';
+      for (var i = 0; i < n; i++) {
+        var r = rnd(L.r[0], L.r[1]), x = rnd(r * 2, TW - r * 2), y = rnd(r * 2, L.th - r * 2), a = rnd(L.a[0], L.a[1]).toFixed(2);
+        if (Math.random() < .3) {
+          d += '<path transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + (r * 1.1).toFixed(2) + ')" fill="' + col + '" fill-opacity="' + a + '" d="M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z"/>';
+        } else {
+          var k = r * 2, p = [[1, .5], [.6131, .6131], [.5, 1], [.3869, .6131], [0, .5], [.3869, .3869], [.5, 0], [.6131, .3869]].map(function (q) { return (x + (q[0] - .5) * k).toFixed(1) + ',' + (y + (q[1] - .5) * k).toFixed(1); }).join(' ');
+          d += '<polygon fill="' + col + '" fill-opacity="' + a + '" points="' + p + '"/>';
+        }
+      }
+      return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + TW + '" height="' + L.th + '" viewBox="0 0 ' + TW + ' ' + L.th + '">' + d + '</svg>') + '")';
     }
+    function build() {
+      var col = (getComputedStyle(root).getPropertyValue('--sparkle') || '').trim() || '#ff9cc4', css = '';
+      box.textContent = '';
+      layers.forEach(function (L, i) {
+        var el = document.createElement('div'); el.className = 'sl';
+        el.style.cssText = 'top:-' + L.th + 'px;height:' + (VH + L.th) + 'px;background-image:' + tile(L, col) + ';background-size:' + TW + 'px ' + L.th + 'px';
+        var dur = L.th / L.speed, steps = Math.round(dur * 24);
+        el.style.animation = 'sl-fall' + i + ' ' + dur.toFixed(1) + 's steps(' + steps + ') infinite, sl-sway ' + (7 + i * 2) + 's steps(80) ' + (-i * 2.3) + 's infinite alternate';
+        css += '@keyframes sl-fall' + i + '{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,' + L.th + 'px,0)}}';
+        box.appendChild(el);
+      });
+      styleEl.textContent = css;
+    }
+    build();
+    document.head.appendChild(styleEl);
     document.body.insertBefore(box, document.body.firstChild);
+    document.addEventListener('click', function (e) { if (e.target.closest('.theme-btn')) setTimeout(build, 0); });
+    if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { setTimeout(build, 0); }); } catch (e) {} }
   })();
 })();

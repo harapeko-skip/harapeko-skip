@@ -126,7 +126,7 @@ p { margin: 0; }
 /* ---------- トップ: ヒーロー ---------- */
 .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 24px; align-items: center; padding-block: 40px 28px; }
 .hero-copy { min-width: 0; display: grid; gap: 20px; justify-items: start; }
-.hero-logo { width: min(100%, 460px); animation: logo-in 1s cubic-bezier(.3, 1.4, .5, 1) both, bob 5s ease-in-out 1s infinite; }
+.hero-logo { width: min(100%, 460px); animation: logo-in 1s cubic-bezier(.3, 1.4, .5, 1) both, bob 9s ease-in-out 1s infinite; }
 .hero-lead { font-size: clamp(17px, 2.4vw, 21px); font-weight: 700; }
 .hero-lead span { display: inline-block; background: linear-gradient(transparent 62%, color-mix(in srgb, var(--gold) 55%, transparent) 62%); }
 .hero-sub { color: var(--ink-soft); font-size: 15px; max-width: 34em; }
@@ -143,7 +143,7 @@ p { margin: 0; }
 .stage .ch {
   position: absolute; bottom: 0; z-index: 2; background: none; border: 0; padding: 0; cursor: pointer;
   transform-origin: 50% 100%;
-  animation: pop .95s cubic-bezier(.3, 1.35, .5, 1) both, hop 3.6s ease-in-out infinite;
+  animation: pop .95s cubic-bezier(.3, 1.35, .5, 1) both, hop 7s ease-in-out infinite;
 }
 .stage .ch img { height: 100%; width: auto; max-width: none; }
 .stage .ch:hover { filter: brightness(1.06); }
@@ -198,7 +198,7 @@ h1.logo-h { margin: 0; }
 .cta p { margin-top: 6px; font-weight: 700; }
 .cta .btn { margin-top: 20px; background: var(--card); color: var(--pink-deep); border-color: var(--card); box-shadow: 0 5px 0 rgba(0,0,0,.14); }
 .cta-row { display: flex; justify-content: center; align-items: flex-end; gap: clamp(2px, 1.5vw, 14px); margin-top: 22px; flex-wrap: nowrap; }
-.cta-row img { height: clamp(58px, 11vw, 110px); width: auto; animation: hop 3s ease-in-out infinite; transform-origin: 50% 100%; }
+.cta-row img { height: clamp(58px, 11vw, 110px); width: auto; animation: hop 6s ease-in-out infinite; transform-origin: 50% 100%; }
 .cta-row img:nth-child(2n) { animation-delay: -.8s; }
 .cta-row img:nth-child(3n) { animation-delay: -1.6s; }
 
@@ -249,7 +249,7 @@ h1.logo-h { margin: 0; }
 }
 .dl-card.main { border-color: var(--pink); }
 .dl-card .ribbon { position: absolute; top: -14px; left: 24px; background: var(--pink); color: var(--on-pink); font-weight: 900; font-size: 13px; padding: 2px 16px; border-radius: 999px; }
-.dl-card .chibi { position: absolute; right: 16px; top: -46px; height: 96px; width: auto; animation: hop 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
+.dl-card .chibi { position: absolute; right: 16px; top: -46px; height: 96px; width: auto; animation: hop 6.5s ease-in-out infinite; transform-origin: 50% 100%; }
 .dl-card h2 { font-size: 22px; font-weight: 900; }
 .dl-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--ink-soft); font-weight: 700; }
 .dl-meta b { color: var(--ink); }
@@ -279,8 +279,8 @@ h1.logo-h { margin: 0; }
 /* ---------- アニメーション ---------- */
 @keyframes pop { 0% { opacity: 0; transform: translateY(70px) scale(.5); } 55% { opacity: 1; transform: translateY(-16px) scale(1.06); } 100% { opacity: 1; transform: none; } }
 @keyframes logo-in { 0% { opacity: 0; transform: translateY(-40px) scale(.8) rotate(-4deg); } 100% { opacity: 1; transform: none; } }
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-@keyframes hop { 0%, 100% { transform: translateY(0) scaleY(1); } 45% { transform: translateY(-10px) scaleY(1.02); } 60% { transform: translateY(0) scaleY(.97); } }
+@keyframes bob { 0%, 50%, 100% { transform: translateY(0); } 25% { transform: translateY(-8px); } }
+@keyframes hop { 0%, 24%, 100% { transform: translateY(0) scaleY(1); } 11% { transform: translateY(-10px) scaleY(1.02); } 17% { transform: translateY(0) scaleY(.97); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slide { to { transform: translateX(calc(-1 * var(--shift, 50%))); } }
 .view[hidden] { display: none !important; }
@@ -391,16 +391,9 @@ h1.logo-h { margin: 0; }
 
 #sparkles { display: none; }
 .sparkles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.sparkles .sp { position: absolute; top: 0; left: var(--x); width: var(--w); height: var(--h); opacity: var(--a); animation: sp-fall var(--fall) linear var(--fd) infinite; will-change: transform; }
-.sparkles .sp b { display: block; width: 100%; height: 100%; background: var(--sparkle); animation: sp-sway var(--sw) ease-in-out var(--sd) infinite alternate, sp-tw var(--tw) ease-in-out var(--td) infinite; }
-.sparkles .star b { clip-path: polygon(100% 50%, 61.31% 61.31%, 50% 100%, 38.69% 61.31%, 0 50%, 38.69% 38.69%, 50% 0, 61.31% 38.69%); }
-.sparkles .heart b {
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-0.82 -0.69 1.64 1.59'%3E%3Cpath d='M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-0.82 -0.69 1.64 1.59'%3E%3Cpath d='M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
-}
-@keyframes sp-fall { from { transform: translate3d(0, -24px, 0); } to { transform: translate3d(0, calc(100vh + 24px), 0); } }
-@keyframes sp-sway { from { transform: translate3d(-18px, 0, 0); } to { transform: translate3d(18px, 0, 0); } }
-@keyframes sp-tw { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+/* 星とハートは「模様のタイル」を3枚だけ重ね、それぞれを1つの動きで流します(1つ1つを動かすより、ずっと軽い) */
+.sparkles .sl { position: absolute; left: -24px; right: -24px; background-repeat: repeat; will-change: transform; }
+@keyframes sl-sway { from { translate: -14px 0; } to { translate: 14px 0; } }
 
 .fx-rings { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; pointer-events: none; z-index: 0; }
 .fx-center { position: absolute; left: 50%; top: 55%; width: 0; height: 0; }
