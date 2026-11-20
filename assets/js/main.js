@@ -249,93 +249,93 @@
     });
   })();
 
-  /* ---- トップのキャラ演出（開いた時に1回 + ずっと続く） ----
-     1回: 波紋の輪 / 流れ星 / 星のはじけ / 魔法陣が回りながら現れる(キャラをタップした時にも、はじけと波紋)
-     ずっと: 後光と魔法陣のゆっくりした回転 / ときどき流れ星
-     ※ 回り続ける大きな図形(後光・魔法陣)は、ブラウザの描画担当(GPU)に任せるCSSアニメーションにしています。
-        JavaScriptで描くのは、流れ星・波紋・はじけだけで、動いていない間は描画も待機もしません(CPUの負担を減らすため)。 */
+  /* ---- 演出(トップのキャラの後光・魔法陣・流れ星 / 画面全体のキラキラ) ----
+     どちらも「canvas を1枚だけ使い、時刻から位置を計算して、単純な図形で描く」方式です。
+     ・CSSアニメーションで大きな半透明レイヤーを何枚も動かすのをやめました(これが重さの原因でした)
+     ・毎秒30回(キラキラは24回)までしか描かず、画面に見えていない・タブが裏のときは完全に止まります
+     ・後光は「1つのパスを1回塗る」、魔法陣は「作っておいた線の形(Path2D)を回して描くだけ」、
+       キラキラは「作っておいた星・ハートの小さな絵を並べるだけ」なので、1コマの処理がとても軽いです。 */
+  var TAU = Math.PI * 2;
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function ease(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
+  function isDarkNow() { return root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  function cssVar(n, d) { return (getComputedStyle(root).getPropertyValue(n) || '').trim() || d; }
+  function rgba(h, a) { var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h) || [0, 'e8', 'a2', '1f']; return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')'; }
+
   (function stageFx() {
     var cv = document.getElementById('stage-fx'); if (!cv) return;
     var ctx = cv.getContext('2d'), W = 0, H = 0, cx = 0, cy = 0, R = 0;
-    var T0 = performance.now(), last = T0, lastDraw = 0, parts = [], meteors = [], ripples = [];
-    var gold = '#e8a21f', sky = '#46aee6', pink = '#ff7fae', dark = false, tick = 0;
-    function rnd(a, b) { return a + Math.random() * (b - a); }
-    function rgba(h, a) { var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h) || [0, 'e8', 'a2', '1f']; return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')'; }
-    function ease(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
-
-    /* 後光と魔法陣(SVGとCSSアニメーション) */
-    function svgEl(name, attrs) { var e = document.createElementNS('http://www.w3.org/2000/svg', name); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
-    function layer(draw) { var s = svgEl('svg', { viewBox: '-100 -100 200 200', 'class': 'fx-svg', focusable: 'false' }); draw(s); return s; }
-    function f2(n) { return n.toFixed(2); }
-    function buildRings(canvas) {
-      var box = document.createElement('div'); box.className = 'fx-rings' + (reduce ? '' : ' live'); box.setAttribute('aria-hidden', 'true');
-      var center = document.createElement('div'); center.className = 'fx-center'; box.appendChild(center);
-      var halo = document.createElement('div'); halo.className = 'fx-halo'; center.appendChild(halo);
-      for (var i = 0; i < 14; i++) { var ray = document.createElement('i'); ray.className = 'fx-ray'; ray.style.setProperty('--i', i); ray.style.transform = 'rotate(' + (i * 360 / 14) + 'deg)'; halo.appendChild(ray); }
-      var circle = document.createElement('div'); circle.className = 'fx-circle'; center.appendChild(circle);
-      var base = document.createElement('div'); base.className = 'fx-flat';
-      base.appendChild(layer(function (s) { s.appendChild(svgEl('circle', { r: 100 })); s.appendChild(svgEl('circle', { r: 94 })); }));
-      circle.appendChild(base);
-      function rot(cls, draw) { var r = document.createElement('div'); r.className = 'fx-rot ' + cls; r.appendChild(layer(draw)); circle.appendChild(r); }
-      rot('r1', function (s) {
-        var d = ''; for (var k = 0; k < 48; k++) { var a = (k + 1) * Math.PI / 24, o = k % 4 ? 92 : 86; d += 'M' + f2(88 * Math.cos(a)) + ' ' + f2(88 * Math.sin(a)) + 'L' + f2(o * Math.cos(a)) + ' ' + f2(o * Math.sin(a)); }
-        s.appendChild(svgEl('path', { d: d, 'class': 'sky' }));
-      });
-      rot('r2', function (s) {
-        var d = ''; for (var h = 0; h < 2; h++) { for (var v = 0; v < 3; v++) { var a = v * 2.094 + h * Math.PI; d += (v ? 'L' : 'M') + f2(Math.cos(a) * 80) + ' ' + f2(Math.sin(a) * 80); } d += 'Z'; }
-        s.appendChild(svgEl('path', { d: d }));
-        for (var n = 0; n < 6; n++) { var b = n * Math.PI / 3; s.appendChild(svgEl('circle', { cx: f2(Math.cos(b) * 80), cy: f2(Math.sin(b) * 80), r: 1.8, 'class': 'dot' })); }
-      });
-      rot('r3', function (s) { s.appendChild(svgEl('circle', { r: 60, 'class': 'sky dash' })); });
-      canvas.parentNode.insertBefore(box, canvas);
-      return box;
-    }
-    var rings = buildRings(cv);
+    var gold = '#e8a21f', sky = '#46aee6', pink = '#ff7fae', dark = false;
+    var T0 = performance.now(), lastDraw = 0, last = T0;
+    var parts = [], meteors = [], ripples = [], nextMeteor = 7;
+    var haloGrad = null, P = null;          /* haloGrad: 後光の塗り / P: 魔法陣の線の形(Path2D) */
+    var running = true, raf = 0;
 
     function readColors() {
-      var cs = getComputedStyle(document.documentElement);
-      gold = cs.getPropertyValue('--fx-a').trim() || gold; sky = cs.getPropertyValue('--fx-b').trim() || sky; pink = cs.getPropertyValue('--pink').trim() || pink;
-      dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      gold = cssVar('--fx-a', gold); sky = cssVar('--fx-b', sky); pink = cssVar('--pink', pink); dark = isDarkNow();
+      build();
+    }
+    /* 後光と魔法陣の「形」を作っておく(大きさと色が変わったときだけ作り直す) */
+    function build() {
+      if (!R) return;
+      var L = R * 1.45, w = .09, i, d = new Path2D();
+      for (i = 0; i < 14; i++) { var a = i * TAU / 14; d.moveTo(0, 0); d.lineTo(Math.cos(a - w) * L, Math.sin(a - w) * L); d.lineTo(Math.cos(a + w) * L, Math.sin(a + w) * L); d.closePath(); }
+      haloGrad = { path: d, fill: (function () { var g = ctx.createRadialGradient(0, 0, 0, 0, 0, L); g.addColorStop(0, rgba(gold, 1)); g.addColorStop(.34, rgba(gold, 1)); g.addColorStop(1, rgba(gold, 0)); return g; })() };
+      var s = R / 100, base = new Path2D(), ticks = new Path2D(), star = new Path2D(), dots = new Path2D(), dash = new Path2D();
+      base.arc(0, 0, 100 * s, 0, TAU); base.moveTo(94 * s, 0); base.arc(0, 0, 94 * s, 0, TAU);
+      for (i = 0; i < 48; i++) { var b = (i + 1) * Math.PI / 24, o = i % 4 ? 92 : 86; ticks.moveTo(88 * s * Math.cos(b), 88 * s * Math.sin(b)); ticks.lineTo(o * s * Math.cos(b), o * s * Math.sin(b)); }
+      for (var h = 0; h < 2; h++) { for (var v = 0; v < 3; v++) { var c = v * 2.094 + h * Math.PI, x = Math.cos(c) * 80 * s, y = Math.sin(c) * 80 * s; if (v) star.lineTo(x, y); else star.moveTo(x, y); } star.closePath(); }
+      for (i = 0; i < 6; i++) { var e = i * Math.PI / 3, dx = Math.cos(e) * 80 * s, dy = Math.sin(e) * 80 * s; dots.moveTo(dx + 1.8 * s, dy); dots.arc(dx, dy, 1.8 * s, 0, TAU); }
+      dash.arc(0, 0, 60 * s, 0, TAU);
+      P = { s: s, base: base, ticks: ticks, star: star, dots: dots, dash: dash };
     }
     function size() {
-      var dpr = 1;
-      W = cv.clientWidth; H = cv.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cx = W / 2; cy = H * .55; R = Math.min(W, H) * .4;
-      rings.style.setProperty('--R', R.toFixed(1) + 'px');
-    }
-    function star(x, y, r, spikes) {
-      ctx.beginPath();
-      for (var i = 0; i < spikes * 2; i++) { var a = i * Math.PI / spikes - Math.PI / 2, d = i % 2 ? r * .38 : r; ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d); }
-      ctx.closePath(); ctx.fill();
+      W = cv.clientWidth; H = cv.clientHeight; cv.width = W; cv.height = H;
+      cx = W / 2; cy = H * .55; R = Math.min(W, H) * .4; build(); if (!running || reduce) paint(performance.now());
     }
     function burst(n, power) {
       var cols = [gold, sky, pink, '#ffffff'];
-      for (var i = 0; i < n; i++) { var a = rnd(0, 6.283), v = rnd(.35, 1) * power; parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0, max: rnd(1.1, 1.9), r: rnd(4, 9), c: cols[i % 4], rot: rnd(0, 6) }); }
+      for (var i = 0; i < n; i++) { var a = rnd(0, TAU), v = rnd(.35, 1) * power; parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0, max: rnd(1.1, 1.9), r: rnd(4, 9), c: cols[i % 4] }); }
     }
     function ripple(delay) { ripples.push({ t: -delay }); }
-    function meteor(delay) { meteors.push({ t: -delay, x: rnd(W * .55, W * 1.0), y: rnd(-10, H * .25), len: rnd(110, 170) }); }
-    function intro() {
-      parts = []; ripples = []; meteors = [];
-      ripple(.1); ripple(.4); ripple(.7); burst(26, 380); meteor(.5); meteor(.85); meteor(1.2);
+    function meteor(delay) { meteors.push({ t: -delay, x: rnd(W * .55, W), y: rnd(-10, H * .25), len: rnd(110, 170) }); }
+    function star5(x, y, r) {
+      ctx.beginPath();
+      for (var i = 0; i < 10; i++) { var a = i * Math.PI / 5 - Math.PI / 2, d = i % 2 ? r * .38 : r; ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d); }
+      ctx.closePath(); ctx.fill();
     }
-    function draw(now) {
-      var t = (now - T0) / 1000, dt = Math.min(.05, (now - last) / 1000); last = now;
-      if (++tick % 60 === 1) readColors();
+
+    /* 後光(1回塗るだけ)と魔法陣(作っておいた形を回して描くだけ) */
+    function drawRings(t) {
+      var kh = ease(t / 1.1), kc = ease(t / 1.3), ks = ease(t / 1.8), ra = dark ? .75 : .54, ha = (dark ? .26 : .3) * .85;
+      if (!P) return;
+      ctx.save(); ctx.translate(cx, cy);
+      ctx.save(); ctx.rotate(t * TAU / 105); ctx.globalAlpha = ha * kh; ctx.fillStyle = haloGrad.fill; ctx.fill(haloGrad.path); ctx.restore();
+      var sc = .35 + .65 * kc; ctx.scale(sc, sc * .9); ctx.globalAlpha = ra * kc; ctx.lineWidth = .9 * P.s;
+      ctx.strokeStyle = gold; ctx.stroke(P.base);
+      var spin = 343.8 * Math.PI / 180 * (1 - ks);
+      ctx.save(); ctx.rotate(t * TAU / 52.4 + spin); ctx.strokeStyle = sky; ctx.stroke(P.ticks); ctx.restore();
+      ctx.save(); ctx.rotate(-t * TAU / 34.9 - spin); ctx.strokeStyle = gold; ctx.stroke(P.star); ctx.fillStyle = sky; ctx.fill(P.dots); ctx.restore();
+      ctx.save(); ctx.rotate(t * TAU / 25.1 + spin); ctx.strokeStyle = sky; ctx.lineWidth = 1.2 * P.s; ctx.setLineDash([1 * P.s, 4.5 * P.s]); ctx.stroke(P.dash); ctx.restore();
+      ctx.restore();
+    }
+    function paint(now) {
+      var t = reduce ? 99 : (now - T0) / 1000, dt = Math.min(.1, (now - last) / 1000); last = now;
       ctx.clearRect(0, 0, W, H);
-      /* 波紋の輪 */
+      drawRings(t);
+      if (reduce) return;
+      if (t > nextMeteor) { meteor(0); nextMeteor = t + rnd(6, 10); }
       ripples = ripples.filter(function (r) { r.t += dt; return r.t < 1.5; });
       ripples.forEach(function (r) {
         if (r.t < 0) return; var q = r.t / 1.5;
         ctx.globalAlpha = (1 - q) * .9; ctx.lineWidth = 5 * (1 - q) + 1; ctx.strokeStyle = 'hsl(' + ((q * 300 + t * 60) % 360) + ',90%,' + (dark ? 72 : 62) + '%)';
-        ctx.beginPath(); ctx.arc(cx, cy, q * Math.min(R * 1.9, H * .43), 0, 6.283); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, q * Math.min(R * 1.9, H * .43), 0, TAU); ctx.stroke();
       });
-      /* はじけた星 */
       parts = parts.filter(function (p) { p.life += dt; return p.life < p.max; });
       parts.forEach(function (p) {
         p.vx *= (1 - 1.8 * dt); p.vy = p.vy * (1 - 1.8 * dt) + 140 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-        ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c; star(p.x, p.y, p.r, 5);
+        ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c; star5(p.x, p.y, p.r);
       });
-      /* 流れ星 */
       meteors = meteors.filter(function (m) { m.t += dt; return m.t < 1.1; });
       meteors.forEach(function (m) {
         if (m.t < 0) return; var q = m.t / 1.1, x = m.x - q * W * .9, y = m.y + q * H * .8, ang = Math.atan2(H * .8, -W * .9);
@@ -344,73 +344,64 @@
         ctx.globalAlpha = Math.sin(q * Math.PI); ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(ang) * m.len, y - Math.sin(ang) * m.len); ctx.stroke();
       });
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1; ctx.lineCap = 'butt';
     }
-    /* 動いている演出がある間だけ描き(多くても毎秒30回)、何もない間は止まって待ちます */
-    var running = true, raf = 0, wake = 0, nextMeteor = 7;
-    function active() { return ripples.length || parts.length || meteors.length; }
+    /* 毎秒30回まで。画面に見えていない・タブが裏のときは止まる */
     function loop(now) {
-      raf = 0;
-      if (document.hidden || !running) return;
-      if (now - lastDraw >= 30) { lastDraw = now; draw(now); }
-      if (active()) raf = requestAnimationFrame(loop);
-      else { ctx.clearRect(0, 0, W, H); sleep(); }
+      raf = 0; if (document.hidden || !running) return;
+      raf = requestAnimationFrame(loop);
+      if (now - lastDraw < 32) return;
+      lastDraw = now; paint(now);
     }
-    function kick() { if (!raf && running && !document.hidden) { last = performance.now(); lastDraw = 0; raf = requestAnimationFrame(loop); } }
-    function sleep() {
-      clearTimeout(wake);
-      wake = setTimeout(function () { meteor(0); nextMeteor += rnd(6, 10); kick(); }, Math.max(0, nextMeteor * 1000 - (performance.now() - T0)));
-    }
+    function kick() { if (!raf && running && !document.hidden && !reduce) { last = performance.now(); raf = requestAnimationFrame(loop); } }
     readColors(); size(); window.addEventListener('resize', size);
     window.addEventListener('stage-burst', function () { burst(12, 260); ripple(0); kick(); });
     document.addEventListener('visibilitychange', kick);
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; rings.classList.toggle('paused', !running); if (running) { if (active()) kick(); else sleep(); } }).observe(cv);
-    if (reduce) return;
-    intro(); kick();
+    document.addEventListener('click', function (e) { if (e.target.closest('.theme-btn')) setTimeout(function () { readColors(); if (reduce) paint(performance.now()); }, 0); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (en) { running = en[0].isIntersecting; if (running) kick(); }).observe(cv);
+    if (reduce) { paint(performance.now()); return; }
+    ripple(.1); ripple(.4); ripple(.7); burst(26, 380); meteor(.5); meteor(.85); meteor(1.2);
+    kick();
   })();
 
   /* ---- キラキラ(星とハート)がゆっくり降る ----
-     星とハートを1つずつ動かすのをやめ、模様を描いた透明な「タイル」3枚を重ねて、1枚ずつ流しています。
-     動くものが80個以上から6個ほどに減るので、画面の描き直しがとても少なくなります。
+     小さな星とハートの絵を作っておき、半分の解像度の canvas に毎秒24回並べるだけです。
      色は --sparkle(ライト/ダークで自動で切り替わります)。 */
   (function sparkles() {
     var old = document.getElementById('sparkles'); if (old) old.hidden = true;
     if (reduce) return;
-    var box = document.createElement('div'); box.className = 'sparkles'; box.setAttribute('aria-hidden', 'true');
-    var styleEl = document.createElement('style');
-    /* タイルは小さく(幅900px)して、1枚だけ・まっすぐ落とす(横ゆれ・コマ送りなし)。大きな半透明レイヤーを重ねないのでCPUの負担が小さい */
-    var TW = 900, VH = Math.max(window.screen.height || 0, window.innerHeight, 600);
-    var layers = [{ th: 900, speed: 28, r: [5, 11], a: [.35, .8] }];
-    function rnd(a, b) { return a + Math.random() * (b - a); }
-    function tile(L, col) {
-      var n = 16, d = '';
-      for (var i = 0; i < n; i++) {
-        var r = rnd(L.r[0], L.r[1]), x = rnd(r * 2, TW - r * 2), y = rnd(r * 2, L.th - r * 2), a = rnd(L.a[0], L.a[1]).toFixed(2);
-        if (Math.random() < .3) {
-          d += '<path transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + (r * 1.1).toFixed(2) + ')" fill="' + col + '" fill-opacity="' + a + '" d="M0 .9C-1.5 -.2 -.6 -1.2 0 -.4C.6 -1.2 1.5 -.2 0 .9Z"/>';
-        } else {
-          var k = r * 2, p = [[1, .5], [.6131, .6131], [.5, 1], [.3869, .6131], [0, .5], [.3869, .3869], [.5, 0], [.6131, .3869]].map(function (q) { return (x + (q[0] - .5) * k).toFixed(1) + ',' + (y + (q[1] - .5) * k).toFixed(1); }).join(' ');
-          d += '<polygon fill="' + col + '" fill-opacity="' + a + '" points="' + p + '"/>';
-        }
-      }
-      return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + TW + '" height="' + L.th + '" viewBox="0 0 ' + TW + ' ' + L.th + '">' + d + '</svg>') + '")';
+    var cv = document.createElement('canvas'); cv.className = 'sparkles'; cv.setAttribute('aria-hidden', 'true');
+    document.body.insertBefore(cv, document.body.firstChild);
+    var ctx = cv.getContext('2d'), SC = .5, W = 0, H = 0, ps = [], t0 = performance.now(), last = t0, lastDraw = 0, raf = 0;
+    var N = window.innerWidth < 600 ? 22 : 40;
+    function sprite(r, heart, col, a) {
+      var k = Math.ceil(r * 2.4), c = document.createElement('canvas'), g; c.width = c.height = k * 2; g = c.getContext('2d');
+      g.translate(k, k); g.globalAlpha = a; g.fillStyle = col; g.beginPath();
+      if (heart) { var q = r * 1.1; g.moveTo(0, .9 * q); g.bezierCurveTo(-1.5 * q, -.2 * q, -.6 * q, -1.2 * q, 0, -.4 * q); g.bezierCurveTo(.6 * q, -1.2 * q, 1.5 * q, -.2 * q, 0, .9 * q); }
+      else { var pts = [[1, .5], [.6131, .6131], [.5, 1], [.3869, .6131], [0, .5], [.3869, .3869], [.5, 0], [.6131, .3869]]; pts.forEach(function (p) { g.lineTo((p[0] - .5) * r * 2, (p[1] - .5) * r * 2); }); }
+      g.closePath(); g.fill(); return { c: c, k: k };
     }
     function build() {
-      var col = (getComputedStyle(root).getPropertyValue('--sparkle') || '').trim() || '#ff9cc4', css = '';
-      box.textContent = '';
-      layers.forEach(function (L, i) {
-        var el = document.createElement('div'); el.className = 'sl';
-        el.style.cssText = 'top:-' + L.th + 'px;height:' + (VH + L.th) + 'px;background-image:' + tile(L, col) + ';background-size:' + TW + 'px ' + L.th + 'px';
-        var dur = L.th / L.speed; /* 毎秒8コマに刻む(なめらかさより軽さを優先。ゆっくり落ちるので違和感は小さい) */
-        el.style.animation = 'sl-fall' + i + ' ' + dur.toFixed(1) + 's steps(' + Math.round(dur * 8) + ') infinite';
-        css += '@keyframes sl-fall' + i + '{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,' + L.th + 'px,0)}}';
-        box.appendChild(el);
-      });
-      styleEl.textContent = css;
+      var col = cssVar('--sparkle', '#ff9cc4'); ps = [];
+      for (var i = 0; i < N; i++) {
+        var depth = Math.random(), r = (4 + depth * 8) * SC;
+        ps.push({ x: Math.random(), y: Math.random(), sp: (14 + depth * 26) * SC, amp: 14 * SC, ph: rnd(0, TAU), spr: sprite(r, Math.random() < .3, col, .3 + depth * .5) });
+      }
     }
-    build();
-    document.head.appendChild(styleEl);
-    document.body.insertBefore(box, document.body.firstChild);
+    function size() { W = Math.round(innerWidth * SC); H = Math.round(innerHeight * SC); cv.width = W; cv.height = H; }
+    function paint(now) {
+      var t = (now - t0) / 1000, dt = Math.min(.1, (now - last) / 1000); last = now;
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < ps.length; i++) {
+        var p = ps[i], k = p.spr.k; p.y += p.sp * dt / H; if (p.y > 1.05) { p.y = -.05; p.x = Math.random(); }
+        ctx.drawImage(p.spr.c, p.x * W + Math.sin(t * .4 + p.ph) * p.amp - k, p.y * H - k);
+      }
+    }
+    function loop(now) { raf = 0; if (document.hidden) return; raf = requestAnimationFrame(loop); if (now - lastDraw < 40) return; lastDraw = now; paint(now); }
+    function kick() { if (!raf && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+    size(); build(); kick();
+    window.addEventListener('resize', size);
+    document.addEventListener('visibilitychange', kick);
     document.addEventListener('click', function (e) { if (e.target.closest('.theme-btn')) setTimeout(build, 0); });
     if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { setTimeout(build, 0); }); } catch (e) {} }
   })();
