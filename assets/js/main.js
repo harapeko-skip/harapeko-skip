@@ -378,16 +378,12 @@
     if (reduce) return;
     var box = document.createElement('div'); box.className = 'sparkles'; box.setAttribute('aria-hidden', 'true');
     var styleEl = document.createElement('style');
-    var TW = Math.min(Math.max(window.screen.width || 0, window.innerWidth), 2560), VH = Math.max(window.screen.height || 0, window.innerHeight, 600);
-    var narrow = window.innerWidth < 600;
-    var layers = [
-      { th: 800, speed: 38, r: [8, 12], a: [.5, .85] },
-      { th: 1000, speed: 26, r: [6, 9], a: [.4, .75] },
-      { th: 1200, speed: 16, r: [4, 7], a: [.3, .6] }
-    ];
+    /* タイルは小さく(幅900px)して、1枚だけ・まっすぐ落とす(横ゆれ・コマ送りなし)。大きな半透明レイヤーを重ねないのでCPUの負担が小さい */
+    var TW = 900, VH = Math.max(window.screen.height || 0, window.innerHeight, 600);
+    var layers = [{ th: 900, speed: 28, r: [5, 11], a: [.35, .8] }];
     function rnd(a, b) { return a + Math.random() * (b - a); }
     function tile(L, col) {
-      var n = Math.max(3, Math.round(TW * L.th / (narrow ? 380000 : 190000))), d = '';
+      var n = 16, d = '';
       for (var i = 0; i < n; i++) {
         var r = rnd(L.r[0], L.r[1]), x = rnd(r * 2, TW - r * 2), y = rnd(r * 2, L.th - r * 2), a = rnd(L.a[0], L.a[1]).toFixed(2);
         if (Math.random() < .3) {
@@ -405,8 +401,8 @@
       layers.forEach(function (L, i) {
         var el = document.createElement('div'); el.className = 'sl';
         el.style.cssText = 'top:-' + L.th + 'px;height:' + (VH + L.th) + 'px;background-image:' + tile(L, col) + ';background-size:' + TW + 'px ' + L.th + 'px';
-        var dur = L.th / L.speed, steps = Math.round(dur * 24);
-        el.style.animation = 'sl-fall' + i + ' ' + dur.toFixed(1) + 's steps(' + steps + ') infinite, sl-sway ' + (7 + i * 2) + 's steps(80) ' + (-i * 2.3) + 's infinite alternate';
+        var dur = L.th / L.speed; /* 毎秒8コマに刻む(なめらかさより軽さを優先。ゆっくり落ちるので違和感は小さい) */
+        el.style.animation = 'sl-fall' + i + ' ' + dur.toFixed(1) + 's steps(' + Math.round(dur * 8) + ') infinite';
         css += '@keyframes sl-fall' + i + '{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,' + L.th + 'px,0)}}';
         box.appendChild(el);
       });
